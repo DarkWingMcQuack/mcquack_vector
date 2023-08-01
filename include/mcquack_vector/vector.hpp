@@ -74,10 +74,35 @@ public:
             dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
         }
     }
+    constexpr vector(size_type count, const T& value) noexcept
+    {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
+            if(count <= SMALL_CAPACITY) {
+                tag_ptr();
+                zero_small_size();
+            }
+        }
+
+        // TODO: optimize this to directly set size and don't loop emplace_back
+        for(size_type i = 0; i < count; i++) {
+            emplace_back(value);
+        }
+    }
+
+    constexpr explicit vector(size_type count) noexcept
+        : vector(count, T{}) {}
+
+    // TODO: implement this
+    template<class InputIt>
+    constexpr vector(InputIt first, InputIt last) noexcept;
+
+    constexpr vector(const vector& other) noexcept;
+    constexpr vector(vector&& other) noexcept;
+    constexpr auto operator=(const vector& other) noexcept -> vector&;
+    constexpr auto operator=(vector&& other) noexcept -> vector&;
 
     constexpr ~vector()
     {
-
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(not data_ptr_tagged()) {
                 delete[] dynamic_.data_;
@@ -87,74 +112,41 @@ public:
         }
     }
 
-    /// @brief Access elements of the vector
-    /// @param pos Position of the element in the vector
-    /// @return Reference to the element at the specified position
-    /// @warning Calling this function with an out of range index results in undefined behavior.
     [[nodiscard]] constexpr auto operator[](std::size_t pos) noexcept -> T&
     {
         return data()[pos];
     }
 
-
-    /// @brief Access elements of the vector (const version)
-    /// @param pos Position of the element in the vector
-    /// @return Const reference to the element at the specified position
-    /// @warning Calling this function with an out of range index results in undefined behavior.
     [[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept -> const T&
     {
         return data()[pos];
     }
 
-    /// @brief Access the first element in the vector (const version)
-    /// @return Const reference to the first element in the vector
-    /// @warning Calling this function on an empty vector results in undefined behavior.
     [[nodiscard]] constexpr auto front() const noexcept -> const T&
     {
         return data()[0];
     }
 
-    /// @brief Access the first element in the vector
-    /// @return Reference to the first element in the vector
-    /// @warning Calling this function on an empty vector results in undefined behavior.
     [[nodiscard]] constexpr auto front() noexcept -> T&
     {
         return data()[0];
     }
 
-    /// @brief Access the last element in the vector (const version)
-    /// @return Const reference to the last element in the vector
-    /// @warning Calling this function on an empty vector results in undefined behavior.
     [[nodiscard]] constexpr auto back() const noexcept -> const T&
     {
         return data()[size() - 1];
     }
 
-    /// @brief Access the last element in the vector
-    /// @return Reference to the last element in the vector
-    /// @warning Calling this function on an empty vector results in undefined behavior.
     [[nodiscard]] constexpr auto back() noexcept -> T&
     {
         return data()[size() - 1];
     }
 
-    /// @brief Check whether the vector is empty
-    /// @return True if the vector is empty, false otherwise
     [[nodiscard]] constexpr auto empty() const noexcept -> bool
     {
         return size() <= 0;
     }
 
-    /**
-     * @brief Adds a new element to the end of the vector
-     * @param args The arguments to forward to the constructor of the element
-     * This method constructs a new element in place at the end of the vector from the given arguments.
-     * It chooses between four cases based on the current state of the vector:
-     * - The vector is small and there is space left in the small buffer, in which case it constructs the new element in the small buffer.
-     * - The vector is small and the small buffer is full, in which case it reallocates the vector to the heap.
-     * - The vector is large and the heap is full, in which case it reallocates the vector's memory on the heap.
-     * - The vector is large and there is space left on the heap, so we just append it in the heap memory.
-     */
     template<class... Args>
     constexpr auto emplace_back(Args&&... args) noexcept -> void
     {
@@ -392,5 +384,11 @@ private:
 
     static_assert(sizeof(dynamic_) == sizeof(small_));
 };
+
+
+// TODO: implement
+template<class First, class... Args>
+    requires(std::is_same_v<First, Args> and ...)
+constexpr auto make_vector(First&& first, Args&&... args) -> vector<First>;
 
 } // namespace mcquack
