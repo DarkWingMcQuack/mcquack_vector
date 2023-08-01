@@ -33,4 +33,6 @@ function (new_test source name)
 endfunction()
 
 new_test(PushBackTests.cpp PushBackTests)
+new_test(EmplaceBackTests.cpp EmplaceBackTests)
 new_test(GeneralTests.cpp GeneralTests)
+new_test(DataTests.cpp DataTests)
