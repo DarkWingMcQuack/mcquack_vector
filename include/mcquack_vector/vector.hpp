@@ -80,7 +80,15 @@ public:
             if(count <= SMALL_CAPACITY) {
                 tag_as_small();
                 zero_small_size();
+            } else {
+                dynamic_.size_ = 0;
+                dynamic_.capacity_ = INITIAL_HEAP_SIZE;
+                dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
             }
+        } else {
+            dynamic_.size_ = 0;
+            dynamic_.capacity_ = INITIAL_HEAP_SIZE;
+            dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
         }
 
         // TODO: optimize this to directly set size and don't loop emplace_back
@@ -94,6 +102,7 @@ public:
 
     // TODO: implement this
     template<class InputIt>
+        requires std::input_iterator<InputIt>
     constexpr vector(InputIt first, InputIt last) noexcept;
 
     constexpr vector(const vector& other) noexcept;
