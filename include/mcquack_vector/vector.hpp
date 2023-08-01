@@ -431,9 +431,15 @@ private:
 };
 
 
-// TODO: implement
+// TODO: optimize
 template<class First, class... Args>
     requires(std::is_same_v<First, Args> and ...)
-constexpr auto make_vector(First&& first, Args&&... args) -> vector<First>;
+constexpr auto make_vector(First&& first, Args&&... args) -> vector<std::remove_cvref_t<First>>
+{
+    vector<std::remove_cvref_t<First>> vec;
+    vec.emplace_back(std::forward<First>(first));
+    (vec.emplace_back(std::forward<Args>(args)), ...);
+    return vec;
+}
 
 } // namespace mcquack
