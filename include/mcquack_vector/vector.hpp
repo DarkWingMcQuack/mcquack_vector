@@ -71,6 +71,7 @@ public:
             dynamic_init();
         }
     }
+
     constexpr vector(size_type count, const T& value) noexcept
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
@@ -97,12 +98,24 @@ public:
         requires std::input_iterator<InputIt>
     constexpr vector(InputIt first, InputIt last) noexcept;
 
+
+    // TODO: implement copy/move - assignment/ctors with a swap function
     constexpr vector(const vector& other) noexcept
+    {
+        *this = other;
+    }
+
+    constexpr vector(vector&& other) noexcept
+    {
+        *this = std::move(other);
+    }
+
+    constexpr auto operator=(const vector& other) noexcept -> vector&
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(other.is_small()) {
                 small_ = other.small_;
-                return;
+                return *this;
             }
         }
 
@@ -112,13 +125,15 @@ public:
         std::uninitialized_copy(other.dynamic_.data_,
                                 other.dynamic_.data_ + dynamic_.size_,
                                 dynamic_.data_);
+        return *this;
     }
-    constexpr vector(vector&& other) noexcept
+
+    constexpr auto operator=(vector&& other) noexcept -> vector&
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(other.is_small()) {
                 small_ = std::move(other.small_);
-                return;
+                return *this;
             }
         }
 
@@ -128,10 +143,9 @@ public:
         other.dynamic_.data_ = nullptr;
         other.dynamic_.size_ = 0;
         other.dynamic_.capacity_ = 0;
-    }
 
-    constexpr auto operator=(const vector& other) noexcept -> vector&;
-    constexpr auto operator=(vector&& other) noexcept -> vector&;
+        return *this;
+    }
 
     constexpr ~vector()
     {

@@ -56,22 +56,22 @@ TEST(CtorTest, SizeConstructorString)
 }
 
 // Test copy constructor
-// TEST(CtorTest, CopyConstructorInt)
-// {
-//     mcquack::vector<int> vec1(3, 15);
-//     mcquack::vector<int> vec2(vec1); // Copy constructor
-//     EXPECT_EQ(vec2.size(), 3);
-//     for(int value : vec2) {
-//         EXPECT_EQ(value, 15);
-//     }
-// }
+TEST(CtorTest, CopyConstructorInt)
+{
+    mcquack::vector<int> vec1(3, 15);
+    mcquack::vector<int> vec2(vec1); // Copy constructor
+    EXPECT_EQ(vec2.size(), 3);
+    for(int value : vec2) {
+        EXPECT_EQ(value, 15);
+    }
+}
 
-// TEST(CtorTest, CopyConstructorString)
-// {
-//     mcquack::vector<std::string> vec1(2, "world");
-//     mcquack::vector<std::string> vec2(vec1); // Copy constructor
-//     EXPECT_EQ(vec2.size(), 2);
-//     for(const auto& str : vec2) {
-//         EXPECT_EQ(str, "world");
-//     }
-// }
+TEST(CtorTest, CopyConstructorString)
+{
+    mcquack::vector<std::string> vec1(2, "world");
+    mcquack::vector<std::string> vec2(vec1); // Copy constructor
+    EXPECT_EQ(vec2.size(), 2);
+    for(const auto& str : vec2) {
+        EXPECT_EQ(str, "world");
+    }
+}
