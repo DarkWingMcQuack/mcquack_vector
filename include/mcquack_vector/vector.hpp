@@ -97,8 +97,39 @@ public:
         requires std::input_iterator<InputIt>
     constexpr vector(InputIt first, InputIt last) noexcept;
 
-    constexpr vector(const vector& other) noexcept;
-    constexpr vector(vector&& other) noexcept;
+    constexpr vector(const vector& other) noexcept
+    {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
+            if(other.is_small()) {
+                small_ = other.small_;
+                return;
+            }
+        }
+
+        dynamic_.size_ = other.dynamic_.size_;
+        dynamic_.capacity_ = other.dynamic_.capacity_;
+        dynamic_.data_ = new T[dynamic_.capacity_];
+        std::uninitialized_copy(other.dynamic_.data_,
+                                other.dynamic_.data_ + dynamic_.size_,
+                                dynamic_.data_);
+    }
+    constexpr vector(vector&& other) noexcept
+    {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
+            if(other.is_small()) {
+                small_ = std::move(other.small_);
+                return;
+            }
+        }
+
+        dynamic_ = other.dynamic_;
+
+        // "nullify" other's dynamic_ to avoid deallocation of the moved resources
+        other.dynamic_.data_ = nullptr;
+        other.dynamic_.size_ = 0;
+        other.dynamic_.capacity_ = 0;
+    }
+
     constexpr auto operator=(const vector& other) noexcept -> vector&;
     constexpr auto operator=(vector&& other) noexcept -> vector&;
 
@@ -226,9 +257,9 @@ public:
                 auto* data = new T[INITIAL_HEAP_SIZE];
 
                 // move small buffer into newly allocated data
-                std::move(small_.data_.begin(),
-                          small_.data_.end(),
-                          data);
+                std::uninitialized_move(small_.data_.begin(),
+                                        small_.data_.end(),
+                                        data);
 
                 // set the members to the right values
                 dynamic_.size_ = current_size;
@@ -243,9 +274,9 @@ public:
             auto* data = new T[dynamic_.capacity_ * GROW_FACTOR];
 
             // move old heap to new one
-            std::move(dynamic_.data_,
-                      dynamic_.data_ + dynamic_.capacity_,
-                      data);
+            std::uninitialized_move(dynamic_.data_,
+                                    dynamic_.data_ + dynamic_.capacity_,
+                                    data);
 
             delete[] dynamic_.data_;
 
