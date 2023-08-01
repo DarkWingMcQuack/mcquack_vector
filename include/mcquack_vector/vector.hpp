@@ -123,7 +123,7 @@ public:
 
     [[nodiscard]] constexpr auto end() noexcept -> iterator
     {
-        return data();
+        return data() + size();
     }
 
     [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator
@@ -133,7 +133,7 @@ public:
 
     [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator
     {
-        return data();
+        return data() + size();
     }
 
     [[nodiscard]] constexpr auto rbegin() noexcept -> reverse_iterator
