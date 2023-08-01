@@ -65,7 +65,7 @@ public:
     constexpr vector() noexcept
     {
         // static_assert(sizeof(dynamic_) == sizeof(small_));
-        if constexpr(SMALL_CAPACITY != 0) {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             tag_ptr();
             zero_small_size();
         } else {
@@ -78,12 +78,12 @@ public:
     constexpr ~vector()
     {
 
-        if constexpr(SMALL_CAPACITY == 0) {
-            delete[] dynamic_.data_;
-        } else {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(not data_ptr_tagged()) {
                 delete[] dynamic_.data_;
             }
+        } else {
+            delete[] dynamic_.data_;
         }
     }
 
@@ -160,7 +160,7 @@ public:
     {
         const auto current_size = size();
 
-        if constexpr(SMALL_CAPACITY != 0) {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             // Case 1: small vector and there is space left in the small buffer
             if(data_ptr_tagged() and current_size < SMALL_CAPACITY) {
                 // Construct the new element in the small buffer
@@ -241,7 +241,7 @@ public:
      */
     constexpr auto pop_back() noexcept -> void
     {
-        if constexpr(SMALL_CAPACITY != 0) {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(data_ptr_tagged()) {
                 dec_small_size();
                 return;
@@ -260,7 +260,7 @@ public:
     [[nodiscard]] constexpr auto data() const noexcept -> const T*
     {
 
-        if constexpr(SMALL_CAPACITY != 0) {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(data_ptr_tagged()) {
                 return small_.data_.data();
             }
@@ -277,7 +277,7 @@ public:
     [[nodiscard]] constexpr auto data() noexcept -> T*
     {
 
-        if constexpr(SMALL_CAPACITY != 0) {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(data_ptr_tagged()) {
                 return small_.data_.data();
             }
@@ -295,7 +295,7 @@ public:
     [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
     {
 
-        if constexpr(SMALL_CAPACITY != 0) {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(data_ptr_tagged()) {
                 return small_size();
             }
@@ -354,6 +354,7 @@ private:
     constinit inline static const auto SMALL_CAPACITY = VECTOR_SIZE / ELEMENT_SIZE;
     constinit inline static const auto INITIAL_HEAP_SIZE = 16;
     constinit inline static const auto GROW_FACTOR = 2;
+    constinit inline static const auto SMALL_VECTOR_OPTIMIZATION_ENABLED = SMALL_CAPACITY > 0;
 
 
 
