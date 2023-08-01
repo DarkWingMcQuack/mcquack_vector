@@ -8,6 +8,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -61,19 +62,23 @@ public:
     /// @brief Alias for the type that can represent the size of the vector.
     using size_type = std::size_t;
 
-    vector() noexcept
+    constexpr vector() noexcept
     {
         // static_assert(sizeof(dynamic_) == sizeof(small_));
-        if constexpr(VECTOR_SIZE != 0) {
+        if constexpr(SMALL_CAPACITY != 0) {
             tag_ptr();
             zero_small_size();
+        } else {
+            dynamic_.size_ = 0;
+            dynamic_.capacity_ = INITIAL_HEAP_SIZE;
+            dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
         }
     }
 
-    ~vector()
+    constexpr ~vector()
     {
 
-        if constexpr(VECTOR_SIZE == 0) {
+        if constexpr(SMALL_CAPACITY == 0) {
             delete[] dynamic_.data_;
         } else {
             if(not data_ptr_tagged()) {
@@ -86,7 +91,7 @@ public:
     /// @param pos Position of the element in the vector
     /// @return Reference to the element at the specified position
     /// @warning Calling this function with an out of range index results in undefined behavior.
-    [[nodiscard]] auto operator[](std::size_t pos) noexcept -> T&
+    [[nodiscard]] constexpr auto operator[](std::size_t pos) noexcept -> T&
     {
         return data()[pos];
     }
@@ -96,7 +101,7 @@ public:
     /// @param pos Position of the element in the vector
     /// @return Const reference to the element at the specified position
     /// @warning Calling this function with an out of range index results in undefined behavior.
-    [[nodiscard]] auto operator[](std::size_t pos) const noexcept -> const T&
+    [[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept -> const T&
     {
         return data()[pos];
     }
@@ -104,7 +109,7 @@ public:
     /// @brief Access the first element in the vector (const version)
     /// @return Const reference to the first element in the vector
     /// @warning Calling this function on an empty vector results in undefined behavior.
-    [[nodiscard]] auto front() const noexcept -> const T&
+    [[nodiscard]] constexpr auto front() const noexcept -> const T&
     {
         return data()[0];
     }
@@ -112,7 +117,7 @@ public:
     /// @brief Access the first element in the vector
     /// @return Reference to the first element in the vector
     /// @warning Calling this function on an empty vector results in undefined behavior.
-    [[nodiscard]] auto front() noexcept -> T&
+    [[nodiscard]] constexpr auto front() noexcept -> T&
     {
         return data()[0];
     }
@@ -120,7 +125,7 @@ public:
     /// @brief Access the last element in the vector (const version)
     /// @return Const reference to the last element in the vector
     /// @warning Calling this function on an empty vector results in undefined behavior.
-    [[nodiscard]] auto back() const noexcept -> const T&
+    [[nodiscard]] constexpr auto back() const noexcept -> const T&
     {
         return data()[size() - 1];
     }
@@ -128,14 +133,14 @@ public:
     /// @brief Access the last element in the vector
     /// @return Reference to the last element in the vector
     /// @warning Calling this function on an empty vector results in undefined behavior.
-    [[nodiscard]] auto back() noexcept -> T&
+    [[nodiscard]] constexpr auto back() noexcept -> T&
     {
         return data()[size() - 1];
     }
 
     /// @brief Check whether the vector is empty
     /// @return True if the vector is empty, false otherwise
-    [[nodiscard]] auto empty() const noexcept -> bool
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool
     {
         return size() <= 0;
     }
@@ -151,11 +156,11 @@ public:
      * - The vector is large and there is space left on the heap, so we just append it in the heap memory.
      */
     template<class... Args>
-    auto emplace_back(Args&&... args) noexcept -> void
+    constexpr auto emplace_back(Args&&... args) noexcept -> void
     {
         const auto current_size = size();
 
-        if constexpr(VECTOR_SIZE != 0) {
+        if constexpr(SMALL_CAPACITY != 0) {
             // Case 1: small vector and there is space left in the small buffer
             if(data_ptr_tagged() and current_size < SMALL_CAPACITY) {
                 // Construct the new element in the small buffer
@@ -212,7 +217,7 @@ public:
      * This method is a wrapper around the emplace_back method, providing a way
      * to add elements to the vector by copying them.
      */
-    auto push_back(const T& elem) noexcept -> void
+    constexpr auto push_back(const T& elem) noexcept -> void
     {
         emplace_back(elem);
     }
@@ -223,7 +228,7 @@ public:
      * This method is a wrapper around the emplace_back method, providing a way
      * to add elements to the vector by moving them.
      */
-    auto push_back(T&& elem) noexcept -> void
+    constexpr auto push_back(T&& elem) noexcept -> void
     {
         emplace_back(std::move(elem));
     }
@@ -234,9 +239,9 @@ public:
      * optimization, it decreases the size stored in the tagged pointer.
      * Otherwise, it simply decreases the size field of the vector.
      */
-    auto pop_back() noexcept -> void
+    constexpr auto pop_back() noexcept -> void
     {
-        if constexpr(VECTOR_SIZE != 0) {
+        if constexpr(SMALL_CAPACITY != 0) {
             if(data_ptr_tagged()) {
                 dec_small_size();
                 return;
@@ -252,10 +257,10 @@ public:
      * a pointer to the small buffer. Otherwise, it returns the data pointer.
      * @return A constant pointer to the vector's data
      */
-    [[nodiscard]] auto data() const noexcept -> const T*
+    [[nodiscard]] constexpr auto data() const noexcept -> const T*
     {
 
-        if constexpr(VECTOR_SIZE != 0) {
+        if constexpr(SMALL_CAPACITY != 0) {
             if(data_ptr_tagged()) {
                 return small_.data_.data();
             }
@@ -269,10 +274,10 @@ public:
      * a pointer to the small buffer. Otherwise, it returns the data pointer.
      * @return A pointer to the vector's data
      */
-    [[nodiscard]] auto data() noexcept -> T*
+    [[nodiscard]] constexpr auto data() noexcept -> T*
     {
 
-        if constexpr(VECTOR_SIZE != 0) {
+        if constexpr(SMALL_CAPACITY != 0) {
             if(data_ptr_tagged()) {
                 return small_.data_.data();
             }
@@ -287,10 +292,10 @@ public:
      * of the vector.
      * @return The number of elements in the vector
      */
-    [[nodiscard]] auto size() const noexcept -> std::size_t
+    [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
     {
 
-        if constexpr(VECTOR_SIZE != 0) {
+        if constexpr(SMALL_CAPACITY != 0) {
             if(data_ptr_tagged()) {
                 return small_size();
             }
@@ -304,32 +309,32 @@ private:
      * @brief Check if the last bit of the pointer is set
      * @return true if the last bit is set, false otherwise
      */
-    [[nodiscard]] auto data_ptr_tagged() const noexcept -> bool
+    [[nodiscard]] constexpr auto data_ptr_tagged() const noexcept -> bool
     {
         return small_.info_ & 0b00000001;
     }
 
-    auto tag_ptr() noexcept -> void
+    constexpr auto tag_ptr() noexcept -> void
     {
         small_.info_ |= 0b00000001;
     }
 
-    [[nodiscard]] auto small_size() const noexcept -> std::uint8_t
+    [[nodiscard]] constexpr auto small_size() const noexcept -> std::uint8_t
     {
         return small_.info_ >> 1;
     }
 
-    auto inc_small_size() noexcept -> void
+    constexpr auto inc_small_size() noexcept -> void
     {
         small_.info_ += 2;
     }
 
-    auto dec_small_size() noexcept -> void
+    constexpr auto dec_small_size() noexcept -> void
     {
         small_.info_ -= 2;
     }
 
-    auto zero_small_size() noexcept -> void
+    constexpr auto zero_small_size() noexcept -> void
     {
         small_.info_ = 0b00000001;
     }
@@ -339,20 +344,16 @@ private:
     // Compute the size of the custom vector in bytes.
     // This is calculated as the sum of sizes of two std::size_t members and one T* member,
     // minus two bytes which are used for tagging and size tracking.
-    constexpr static const auto VECTOR_SIZE = (2 * sizeof(std::size_t)
-                                               + sizeof(T*))
+    constinit inline static const auto VECTOR_SIZE = (2 * sizeof(std::size_t)
+                                                      + sizeof(T*))
         - sizeof(std::uint8_t);
 
 
     // Size of one element in the vector
-    constexpr static const auto ELEMENT_SIZE = sizeof(T);
-
-    // Compute the capacity of the vector for the small buffer optimization.
-    // This is computed by dividing the total size of the custom vector by the size of one element.
-    constexpr static const auto SMALL_CAPACITY = VECTOR_SIZE / ELEMENT_SIZE;
-
-    constexpr static const auto INITIAL_HEAP_SIZE = 16;
-    constexpr static const auto GROW_FACTOR = 2;
+    constinit inline static const auto ELEMENT_SIZE = sizeof(T);
+    constinit inline static const auto SMALL_CAPACITY = VECTOR_SIZE / ELEMENT_SIZE;
+    constinit inline static const auto INITIAL_HEAP_SIZE = 16;
+    constinit inline static const auto GROW_FACTOR = 2;
 
 
 
