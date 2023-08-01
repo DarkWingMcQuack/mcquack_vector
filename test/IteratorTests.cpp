@@ -97,3 +97,30 @@ TEST(IteratorTest, RBeginREndEmpty)
     // Test rbegin() and rend() on empty vector
     EXPECT_EQ(vec.rbegin(), vec.rend());
 }
+
+TEST(IteratorTest, RangeForInt)
+{
+    mcquack::vector<int> vec;
+    for(int i = 0; i < 10; ++i) {
+        vec.push_back(i);
+    }
+
+    int counter = 0;
+    for(int value : vec) {
+        EXPECT_EQ(value, counter++);
+    }
+}
+
+TEST(IteratorTest, RangeForString)
+{
+    mcquack::vector<std::string> vec;
+    vec.push_back("first");
+    vec.push_back("second");
+    vec.push_back("third");
+
+    std::string expected_values[] = {"first", "second", "third"};
+    int counter = 0;
+    for(const auto& value : vec) {
+        EXPECT_EQ(value, expected_values[counter++]);
+    }
+}
