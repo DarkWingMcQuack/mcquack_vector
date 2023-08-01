@@ -376,6 +376,35 @@ public:
     {
         return size() <= 0;
     }
+    constexpr auto swap(vector& other) noexcept -> void
+    {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
+            // If both vectors are small
+            if(is_small() && other.is_small()) {
+                std::swap(small_, other.small_);
+                return;
+            }
+
+            // If both vectors are large
+            if(!is_small() && !other.is_small()) {
+                std::swap(dynamic_, other.dynamic_);
+                return;
+            }
+
+            // One is small and the other is large
+            if(is_small()) {
+                auto temp_small = small_;
+                dynamic_ = other.dynamic_;
+                other.small_ = temp_small;
+            } else {
+                auto temp_dynamic = dynamic_;
+                small_ = other.small_;
+                other.dynamic_ = temp_dynamic;
+            }
+        } else {
+            std::swap(dynamic_, other.dynamic_);
+        }
+    }
 
 private:
     [[nodiscard]] constexpr auto is_small() const noexcept -> bool
