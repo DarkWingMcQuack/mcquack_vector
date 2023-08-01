@@ -66,7 +66,7 @@ public:
     {
         // static_assert(sizeof(dynamic_) == sizeof(small_));
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            tag_ptr();
+            tag_as_small();
             zero_small_size();
         } else {
             dynamic_.size_ = 0;
@@ -78,7 +78,7 @@ public:
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(count <= SMALL_CAPACITY) {
-                tag_ptr();
+                tag_as_small();
                 zero_small_size();
             }
         }
@@ -104,13 +104,63 @@ public:
     constexpr ~vector()
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            if(not data_ptr_tagged()) {
+            if(not is_small()) {
                 delete[] dynamic_.data_;
             }
         } else {
             delete[] dynamic_.data_;
         }
     }
+
+    ////////////////////////////////////////////////////////////////////
+    //                 ITERATORS
+    ////////////////////////////////////////////////////////////////////
+
+    [[nodiscard]] constexpr auto begin() noexcept -> iterator
+    {
+        return data();
+    }
+
+    [[nodiscard]] constexpr auto end() noexcept -> iterator
+    {
+        return data();
+    }
+
+    [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator
+    {
+        return data();
+    }
+
+    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator
+    {
+        return data();
+    }
+
+    [[nodiscard]] constexpr auto rbegin() noexcept -> reverse_iterator
+    {
+        return std::reverse_iterator(end());
+    }
+
+    [[nodiscard]] constexpr auto rend() noexcept -> reverse_iterator
+    {
+        return std::reverse_iterator(begin());
+    }
+
+    [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator
+    {
+        return data();
+        return std::reverse_iterator(cbegin());
+    }
+
+    [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator
+    {
+        return std::reverse_iterator(cbegin());
+    }
+
+
+    ////////////////////////////////////////////////////////////////////
+    //                 INDEX OPERATORS
+    ////////////////////////////////////////////////////////////////////
 
     [[nodiscard]] constexpr auto operator[](std::size_t pos) noexcept -> T&
     {
@@ -121,6 +171,10 @@ public:
     {
         return data()[pos];
     }
+
+    ////////////////////////////////////////////////////////////////////
+    //                 FRONT AND BACK
+    ////////////////////////////////////////////////////////////////////
 
     [[nodiscard]] constexpr auto front() const noexcept -> const T&
     {
@@ -142,10 +196,11 @@ public:
         return data()[size() - 1];
     }
 
-    [[nodiscard]] constexpr auto empty() const noexcept -> bool
-    {
-        return size() <= 0;
-    }
+
+
+    ////////////////////////////////////////////////////////////////////
+    //                 EMPLACE_BACK AND PUSH_BACK
+    ////////////////////////////////////////////////////////////////////
 
     template<class... Args>
     constexpr auto emplace_back(Args&&... args) noexcept -> void
@@ -154,7 +209,7 @@ public:
 
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             // Case 1: small vector and there is space left in the small buffer
-            if(data_ptr_tagged() and current_size < SMALL_CAPACITY) {
+            if(is_small() and current_size < SMALL_CAPACITY) {
                 // Construct the new element in the small buffer
                 small_.data_[current_size] = T{std::forward<Args>(args)...};
                 // Increase the size stored in the tagged pointer
@@ -163,7 +218,7 @@ public:
             }
 
             // Case 2: small vector and the small buffer is full
-            if(data_ptr_tagged() and current_size == SMALL_CAPACITY) {
+            if(is_small() and current_size == SMALL_CAPACITY) {
                 // Reallocate to the heap
 
                 // allocate
@@ -203,38 +258,24 @@ public:
         dynamic_.size_++;
     }
 
-    /**
-     * @brief Adds an element to the end of the vector
-     * @param elem The element to be added to the vector
-     * This method is a wrapper around the emplace_back method, providing a way
-     * to add elements to the vector by copying them.
-     */
     constexpr auto push_back(const T& elem) noexcept -> void
     {
         emplace_back(elem);
     }
 
-    /**
-     * @brief Adds an element to the end of the vector
-     * @param elem The element to be added to the vector
-     * This method is a wrapper around the emplace_back method, providing a way
-     * to add elements to the vector by moving them.
-     */
     constexpr auto push_back(T&& elem) noexcept -> void
     {
         emplace_back(std::move(elem));
     }
 
-    /**
-     * @brief Removes the last element from the vector
-     * Does nothing if the vector is empty. If the vector is using small buffer
-     * optimization, it decreases the size stored in the tagged pointer.
-     * Otherwise, it simply decreases the size field of the vector.
-     */
+    ////////////////////////////////////////////////////////////////////
+    //                         POP_BACK
+    ////////////////////////////////////////////////////////////////////
+
     constexpr auto pop_back() noexcept -> void
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            if(data_ptr_tagged()) {
+            if(is_small()) {
                 dec_small_size();
                 return;
             }
@@ -243,52 +284,41 @@ public:
         dynamic_.size_--;
     }
 
-    /**
-     * @brief Returns a constant pointer to the vector's data
-     * If the vector is using small buffer optimization, this function returns
-     * a pointer to the small buffer. Otherwise, it returns the data pointer.
-     * @return A constant pointer to the vector's data
-     */
+
+    ////////////////////////////////////////////////////////////////////
+    //                         DATA
+    ////////////////////////////////////////////////////////////////////
+
     [[nodiscard]] constexpr auto data() const noexcept -> const T*
     {
 
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            if(data_ptr_tagged()) {
+            if(is_small()) {
                 return small_.data_.data();
             }
         }
         return dynamic_.data_;
     }
 
-    /**
-     * @brief Returns a pointer to the vector's data
-     * If the vector is using small buffer optimization, this function returns
-     * a pointer to the small buffer. Otherwise, it returns the data pointer.
-     * @return A pointer to the vector's data
-     */
     [[nodiscard]] constexpr auto data() noexcept -> T*
     {
 
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            if(data_ptr_tagged()) {
+            if(is_small()) {
                 return small_.data_.data();
             }
         }
         return dynamic_.data_;
     }
 
-    /**
-     * @brief Returns the number of elements in the vector
-     * If the vector is using small buffer optimization, this function retrieves
-     * the size stored in the tagged pointer. Otherwise, it returns the size field
-     * of the vector.
-     * @return The number of elements in the vector
-     */
+    ////////////////////////////////////////////////////////////////////
+    //                         SIZE AND EMPTY
+    ////////////////////////////////////////////////////////////////////
     [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
     {
 
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            if(data_ptr_tagged()) {
+            if(is_small()) {
                 return small_size();
             }
         }
@@ -296,17 +326,18 @@ public:
         return dynamic_.size_;
     }
 
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool
+    {
+        return size() <= 0;
+    }
+
 private:
-    /**
-     * @brief Check if the last bit of the pointer is set
-     * @return true if the last bit is set, false otherwise
-     */
-    [[nodiscard]] constexpr auto data_ptr_tagged() const noexcept -> bool
+    [[nodiscard]] constexpr auto is_small() const noexcept -> bool
     {
         return small_.info_ & 0b00000001;
     }
 
-    constexpr auto tag_ptr() noexcept -> void
+    constexpr auto tag_as_small() noexcept -> void
     {
         small_.info_ |= 0b00000001;
     }
