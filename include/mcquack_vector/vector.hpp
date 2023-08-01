@@ -66,29 +66,21 @@ public:
     {
         // static_assert(sizeof(dynamic_) == sizeof(small_));
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            tag_as_small();
-            zero_small_size();
+            small_init();
         } else {
-            dynamic_.size_ = 0;
-            dynamic_.capacity_ = INITIAL_HEAP_SIZE;
-            dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
+            dynamic_init();
         }
     }
     constexpr vector(size_type count, const T& value) noexcept
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(count <= SMALL_CAPACITY) {
-                tag_as_small();
-                zero_small_size();
+                small_init();
             } else {
-                dynamic_.size_ = 0;
-                dynamic_.capacity_ = INITIAL_HEAP_SIZE;
-                dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
+                dynamic_init();
             }
         } else {
-            dynamic_.size_ = 0;
-            dynamic_.capacity_ = INITIAL_HEAP_SIZE;
-            dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
+            dynamic_init();
         }
 
         // TODO: optimize this to directly set size and don't loop emplace_back
@@ -369,6 +361,19 @@ private:
     constexpr auto zero_small_size() noexcept -> void
     {
         small_.info_ = 0b00000001;
+    }
+
+    constexpr auto small_init() noexcept -> void
+    {
+        zero_small_size();
+        tag_as_small();
+    }
+
+    constexpr auto dynamic_init() noexcept -> void
+    {
+        dynamic_.size_ = 0;
+        dynamic_.capacity_ = INITIAL_HEAP_SIZE;
+        dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
     }
 
 
