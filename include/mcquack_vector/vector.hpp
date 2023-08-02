@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <bitset>
 #include <climits>
 #include <cstddef>
@@ -267,8 +268,11 @@ public:
             if(is_small() and current_size == SMALL_CAPACITY) {
                 // Reallocate to the heap
 
+                constexpr const auto new_capacity =
+                    static_cast<std::size_t>(SMALL_CAPACITY * GROW_FACTOR);
+
                 // allocate
-                auto* data = new T[INITIAL_HEAP_SIZE];
+                auto* const data = new T[new_capacity];
 
                 // move small buffer into newly allocated data
                 std::uninitialized_move(small_.data_.begin(),
@@ -276,8 +280,8 @@ public:
                                         data);
 
                 // set the members to the right values
+                dynamic_.capacity_ = new_capacity;
                 dynamic_.size_ = current_size;
-                dynamic_.capacity_ = INITIAL_HEAP_SIZE;
                 dynamic_.data_ = data;
             }
         }
@@ -285,8 +289,7 @@ public:
         // Case 3: large vector and the heap is full
         if(current_size == dynamic_.capacity_) {
             // allocate
-            auto* data = new T[dynamic_.capacity_ * GROW_FACTOR];
-
+            auto* const data = new T[static_cast<std::size_t>(dynamic_.capacity_ * GROW_FACTOR)];
             // move old heap to new one
             std::uninitialized_move(dynamic_.data_,
                                     dynamic_.data_ + dynamic_.capacity_,
@@ -364,7 +367,7 @@ public:
     {
 
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            if(is_small()) {
+            if(is_small()) [[unlikely]] {
                 return small_size();
             }
         }
@@ -450,23 +453,21 @@ private:
         dynamic_.data_ = new T[INITIAL_HEAP_SIZE];
     }
 
-
-
     // Compute the size of the custom vector in bytes.
     // This is calculated as the sum of sizes of two std::size_t members and one T* member,
     // minus two bytes which are used for tagging and size tracking.
-    constinit inline static const auto VECTOR_SIZE = (2 * sizeof(std::size_t)
-                                                      + sizeof(T*))
+    constinit inline static const auto VECTOR_SIZE =
+        2 * sizeof(std::size_t)
+        + sizeof(T*)
         - sizeof(std::uint8_t);
 
 
     // Size of one element in the vector
     constinit inline static const auto ELEMENT_SIZE = sizeof(T);
     constinit inline static const auto SMALL_CAPACITY = VECTOR_SIZE / ELEMENT_SIZE;
-    constinit inline static const auto INITIAL_HEAP_SIZE = 16;
-    constinit inline static const auto GROW_FACTOR = 2;
+    constinit inline static const auto INITIAL_HEAP_SIZE = 10;
+    constinit inline static const auto GROW_FACTOR = 1.5;
     constinit inline static const auto SMALL_VECTOR_OPTIMIZATION_ENABLED = SMALL_CAPACITY > 0;
-
 
 
 private:
