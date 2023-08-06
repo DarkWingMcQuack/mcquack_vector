@@ -23,6 +23,5 @@ static void EmplaceBack(benchmark::State& state)
         }
 
         benchmark::DoNotOptimize(v);
-        benchmark::ClobberMemory();
     }
 }
