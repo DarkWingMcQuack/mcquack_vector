@@ -133,16 +133,6 @@ public:
     // TODO: implement copy/move - assignment/ctors with a swap function
     constexpr vector(const vector& other) noexcept
     {
-        *this = other;
-    }
-
-    constexpr vector(vector&& other) noexcept
-    {
-        *this = std::move(other);
-    }
-
-    constexpr auto operator=(const vector& other) noexcept -> vector&
-    {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(other.is_small()) {
                 small_ = other.small_;
@@ -150,30 +140,27 @@ public:
             }
         }
 
-        // TODO: can leak here of *this was non empty before
-
         dynamic_.size_ = other.dynamic_.size_;
         dynamic_.capacity_ = other.dynamic_.capacity_;
         dynamic_.data_ = static_cast<T*>(std::malloc(ELEMENT_SIZE * dynamic_.capacity_));
 
-        std::uninitialized_copy(other.dynamic_.data_,
-                                other.dynamic_.data_ + dynamic_.size_,
-                                dynamic_.data_);
-
-        return *this;
+        if constexpr(std::is_trivially_constructible_v<T>) {
+            std::memcpy(dynamic_.data_, other.dynamic_.data_, dynamic_.size_);
+        } else {
+            std::uninitialized_copy(other.dynamic_.data_,
+                                    other.dynamic_.data_ + dynamic_.size_,
+                                    dynamic_.data_);
+        }
     }
 
-    constexpr auto operator=(vector&& other) noexcept -> vector&
+    constexpr vector(vector&& other) noexcept
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(other.is_small()) {
                 small_ = std::move(other.small_);
-                return *this;
+                return;
             }
         }
-
-
-        // TODO: can leak here of *this was non empty before
 
         dynamic_ = other.dynamic_;
 
@@ -181,8 +168,16 @@ public:
         other.dynamic_.data_ = nullptr;
         other.dynamic_.size_ = 0;
         other.dynamic_.capacity_ = 0;
+    }
 
-        return *this;
+    constexpr auto operator=(const vector& other) noexcept -> vector&
+    {
+        // TODO: IMPLEMENT
+    }
+
+    constexpr auto operator=(vector&& other) noexcept -> vector&
+    {
+        // TODO: IMPLEMENT
     }
 
     constexpr ~vector()
