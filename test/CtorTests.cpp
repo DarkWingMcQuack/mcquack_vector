@@ -1,3 +1,5 @@
+#include <cstddef>
+#include <cstdio>
 #include <gtest/gtest.h>
 
 #define private public
@@ -20,38 +22,47 @@ TEST(CtorTest, DefaultConstructorString)
 // Test constructor with size and default value
 TEST(CtorTest, SizeValueConstructorInt)
 {
-    mcquack::vector<int> vec(5, 10);
-    EXPECT_EQ(vec.size(), 5);
-    for(int value : vec) {
-        EXPECT_EQ(value, 10);
+    for(std::size_t i = 0; i < 1000; i++) {
+        mcquack::vector<int> vec(i, 10);
+        EXPECT_EQ(vec.size(), i);
+        for(int value : vec) {
+            EXPECT_EQ(value, 10);
+        }
     }
 }
 
 TEST(CtorTest, SizeValueConstructorString)
 {
-    mcquack::vector<std::string> vec(3, "hello");
-    EXPECT_EQ(vec.size(), 3);
-    for(const auto& str : vec) {
-        EXPECT_EQ(str, "hello");
+
+    for(std::size_t i = 0; i < 1000; i++) {
+        mcquack::vector<std::string> vec(i, "hello");
+        EXPECT_EQ(vec.size(), i);
+        for(const auto& str : vec) {
+            EXPECT_EQ(str, "hello");
+        }
     }
 }
 
 // Test constructor with size
 TEST(CtorTest, SizeConstructorInt)
 {
-    mcquack::vector<int> vec(4);
-    EXPECT_EQ(vec.size(), 4);
-    for(int value : vec) {
-        EXPECT_EQ(value, 0); // For int, the default value is 0
+    for(std::size_t i = 0; i < 1000; i++) {
+        mcquack::vector<int> vec(i);
+        EXPECT_EQ(vec.size(), i);
+        for(int value : vec) {
+            EXPECT_EQ(value, 0); // For int, the default value is 0
+        }
     }
 }
 
 TEST(CtorTest, SizeConstructorString)
 {
-    mcquack::vector<std::string> vec(2);
-    EXPECT_EQ(vec.size(), 2);
-    for(const auto& str : vec) {
-        EXPECT_TRUE(str.empty()); // For std::string, the default value is an empty string
+    for(std::size_t i = 0; i < 1000; i++) {
+        mcquack::vector<std::string> vec(i);
+        EXPECT_EQ(vec.size(), i);
+        for(const auto& str : vec) {
+            EXPECT_EQ(str, "");
+        }
     }
 }
 
