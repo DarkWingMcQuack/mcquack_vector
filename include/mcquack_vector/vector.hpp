@@ -169,6 +169,22 @@ public:
         other.dynamic_.size_ = 0;
         other.dynamic_.capacity_ = 0;
     }
+    constexpr vector(std::initializer_list<T> init) noexcept
+    {
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
+            if(init.size() < SMALL_CAPACITY) {
+                small_init();
+                std::uninitialized_move(init.begin(), init.end(), small_.data_.begin());
+                inc_small_size_by(init.size());
+                return;
+            }
+        }
+
+        dynamic_.size_ = init.size();
+        dynamic_.capacity_ = init.size();
+        dynamic_.data_ = static_cast<T*>(std::malloc(ELEMENT_SIZE * dynamic_.capacity_));
+        std::uninitialized_move(init.begin(), init.end(), dynamic_.data_);
+    }
 
     constexpr auto operator=(const vector& other) noexcept -> vector&
     {
@@ -390,7 +406,6 @@ public:
 
     [[nodiscard]] constexpr auto data() const noexcept -> const T*
     {
-
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(is_small()) {
                 return small_.data_.data();
@@ -401,7 +416,6 @@ public:
 
     [[nodiscard]] constexpr auto data() noexcept -> T*
     {
-
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(is_small()) {
                 return small_.data_.data();
@@ -415,7 +429,6 @@ public:
     ////////////////////////////////////////////////////////////////////
     [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
     {
-
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(is_small()) {
                 return small_size();
@@ -427,7 +440,6 @@ public:
 
     [[nodiscard]] constexpr auto capacity() const noexcept -> std::size_t
     {
-
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(is_small()) {
                 return SMALL_CAPACITY;
