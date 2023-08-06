@@ -114,7 +114,7 @@ public:
             } else {
                 small_init();
                 std::uninitialized_value_construct(small_.data_.data(),
-                                                     small_.data_.data() + count);
+                                                   small_.data_.data() + count);
                 inc_small_size_by(count);
             }
         } else {
@@ -189,7 +189,6 @@ public:
 
     constexpr ~vector()
     {
-
         if constexpr(not std::is_trivially_destructible_v<T>) {
             auto* d = data();
             auto s = size();
