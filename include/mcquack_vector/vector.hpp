@@ -136,7 +136,7 @@ public:
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(other.is_small()) {
                 small_ = other.small_;
-                return *this;
+                return;
             }
         }
 
