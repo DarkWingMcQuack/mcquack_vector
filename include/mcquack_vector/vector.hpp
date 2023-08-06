@@ -318,55 +318,12 @@ public:
             }
 
             if(is_small() and current_size == SMALL_CAPACITY) {
-                const std::size_t new_capacity = SMALL_CAPACITY * GROW_FACTOR;
-
-                auto* data = static_cast<T*>(std::malloc(new_capacity * ELEMENT_SIZE));
-
-                if constexpr(std::is_trivially_constructible_v<T>) {
-                    std::memcpy(data, small_.data_.data(), current_size * ELEMENT_SIZE);
-                } else {
-                    std::uninitialized_move(small_.data_.begin(),
-                                            small_.data_.end(),
-                                            data);
-                }
-
-                if constexpr(not std::is_trivially_destructible_v<T>) {
-                    std::destroy(small_.data_.begin(), dynamic_.data_.end());
-                }
-
-                dynamic_.capacity_ = new_capacity;
-                dynamic_.size_ = current_size;
-                dynamic_.data_ = data;
+                emplace_back_small_to_dynamic();
             }
         }
 
         if(current_size == dynamic_.capacity_) {
-            const std::size_t new_capacity = std::max(current_size, INITIAL_HEAP_SIZE) * GROW_FACTOR;
-
-            if constexpr(std::is_trivially_constructible_v<T> and std::is_trivially_destructible_v<T>) {
-                dynamic_.data_ = static_cast<T*>(std::realloc(dynamic_.data_, new_capacity * ELEMENT_SIZE));
-            } else {
-                auto* data = static_cast<T*>(std::malloc(new_capacity * ELEMENT_SIZE));
-
-                if constexpr(std::is_trivially_constructible_v<T>) {
-                    std::memcpy(data, dynamic_.data_, current_size * ELEMENT_SIZE);
-                } else {
-                    // move old heap to new one
-                    std::uninitialized_move(dynamic_.data_,
-                                            dynamic_.data_ + current_size,
-                                            data);
-                }
-
-                if constexpr(not std::is_trivially_destructible_v<T>) {
-                    std::destroy(dynamic_.data_, dynamic_.data_ + current_size);
-                }
-
-                std::free(dynamic_.data_);
-
-                dynamic_.data_ = data;
-            }
-
-            dynamic_.capacity_ = new_capacity;
+            emplace_back_dynamic_expand(current_size);
         }
 
         new(dynamic_.data_ + current_size) T{std::forward<Args>(args)...};
@@ -503,6 +460,59 @@ public:
     }
 
 private:
+    constexpr auto emplace_back_small_to_dynamic() noexcept -> void
+    {
+        const std::size_t new_capacity = SMALL_CAPACITY * GROW_FACTOR;
+
+        auto* data = static_cast<T*>(std::malloc(new_capacity * ELEMENT_SIZE));
+
+        if constexpr(std::is_trivially_constructible_v<T>) {
+            std::memcpy(data, small_.data_.data(), SMALL_CAPACITY * ELEMENT_SIZE);
+        } else {
+            std::uninitialized_move(small_.data_.begin(),
+                                    small_.data_.end(),
+                                    data);
+        }
+
+        if constexpr(not std::is_trivially_destructible_v<T>) {
+            std::destroy(small_.data_.begin(), dynamic_.data_.end());
+        }
+
+        dynamic_.capacity_ = new_capacity;
+        dynamic_.size_ = SMALL_CAPACITY;
+        dynamic_.data_ = data;
+    }
+
+    constexpr auto emplace_back_dynamic_expand(std::size_t current_size) noexcept -> void
+    {
+        const std::size_t new_capacity = std::max(current_size, INITIAL_HEAP_SIZE) * GROW_FACTOR;
+
+        if constexpr(std::is_trivially_constructible_v<T> and std::is_trivially_destructible_v<T>) {
+            dynamic_.data_ = static_cast<T*>(std::realloc(dynamic_.data_, new_capacity * ELEMENT_SIZE));
+        } else {
+            auto* data = static_cast<T*>(std::malloc(new_capacity * ELEMENT_SIZE));
+
+            if constexpr(std::is_trivially_constructible_v<T>) {
+                std::memcpy(data, dynamic_.data_, current_size * ELEMENT_SIZE);
+            } else {
+                // move old heap to new one
+                std::uninitialized_move(dynamic_.data_,
+                                        dynamic_.data_ + current_size,
+                                        data);
+            }
+
+            if constexpr(not std::is_trivially_destructible_v<T>) {
+                std::destroy(dynamic_.data_, dynamic_.data_ + current_size);
+            }
+
+            std::free(dynamic_.data_);
+
+            dynamic_.data_ = data;
+        }
+
+        dynamic_.capacity_ = new_capacity;
+    }
+
     [[nodiscard]] constexpr auto is_small() const noexcept -> bool
     {
         return small_.info_ & 0b00000001;
