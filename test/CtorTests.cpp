@@ -86,3 +86,37 @@ TEST(CtorTest, CopyConstructorString)
         EXPECT_EQ(str, "world");
     }
 }
+
+TEST(VectorTests, StringVectorInitializerListCtor)
+{
+    mcquack::vector<std::string> vec{"a", "b", "c"};
+
+    EXPECT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec[0], "a");
+    EXPECT_EQ(vec[1], "b");
+    EXPECT_EQ(vec[2], "c");
+}
+
+TEST(VectorTests, IntVectorInitializerListCtor)
+{
+    mcquack::vector<int> vec{1, 2, 3};
+
+    EXPECT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    EXPECT_EQ(vec[2], 3);
+}
+
+TEST(VectorTests, EmptyStringVectorInitializerListCtor)
+{
+    mcquack::vector<std::string> vec{};
+
+    EXPECT_TRUE(vec.empty());
+}
+
+TEST(VectorTests, EmptyIntVectorInitializerListCtor)
+{
+    mcquack::vector<int> vec{};
+
+    EXPECT_TRUE(vec.empty());
+}
