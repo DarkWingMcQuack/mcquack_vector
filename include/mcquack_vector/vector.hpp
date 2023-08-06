@@ -113,8 +113,6 @@ public:
                 std::uninitialized_value_construct(dynamic_.data_, dynamic_.data_ + count);
             } else {
                 small_init();
-                std::uninitialized_value_construct(small_.data_.data(),
-                                                   small_.data_.data() + count);
                 inc_small_size_by(count);
             }
         } else {
