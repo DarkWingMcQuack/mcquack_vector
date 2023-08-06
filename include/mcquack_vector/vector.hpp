@@ -172,12 +172,17 @@ public:
 
     constexpr auto operator=(const vector& other) noexcept -> vector&
     {
-        // TODO: IMPLEMENT
+        if(this != &other) {
+            vector(other).swap(*this);
+        }
+
+        return *this;
     }
 
     constexpr auto operator=(vector&& other) noexcept -> vector&
     {
-        // TODO: IMPLEMENT
+        other.swap(*this); // is this good enough?
+        return *this;
     }
 
     constexpr ~vector()
