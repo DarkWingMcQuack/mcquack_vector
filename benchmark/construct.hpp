@@ -36,7 +36,7 @@ static void ConstructWithElem(benchmark::State& state)
     for(auto _ : state) {
 
         if constexpr(std::is_same_v<std::string, T>) {
-            Vec<T> v(state.range(0), random_str(state.range(0)));
+            Vec<T> v(state.range(0), std::to_string(std::rand()));
             benchmark::DoNotOptimize(v);
         } else {
             Vec<T> v(state.range(0), static_cast<T>(std::rand()));
