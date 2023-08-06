@@ -79,18 +79,27 @@ public:
     constexpr vector(size_type count, const T& value) noexcept
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
-            if(count <= SMALL_CAPACITY) {
-                small_init();
+            if(count > SMALL_CAPACITY) {
+                dynamic_.size_ = count;
+                dynamic_.capacity_ = count;
+                dynamic_.data_ = static_cast<T*>(std::malloc(ELEMENT_SIZE * count));
+                std::uninitialized_fill(dynamic_.data_,
+                                        dynamic_.data_ + count,
+                                        value);
             } else {
-                dynamic_init();
+                small_init();
+                std::uninitialized_fill(small_.data_.data(),
+                                        small_.data_.data() + count,
+                                        value);
+                inc_small_size_by(count);
             }
         } else {
-            dynamic_init();
-        }
-
-        // TODO: optimize this to directly set size and don't loop emplace_back
-        for(size_type i = 0; i < count; i++) {
-            emplace_back(value);
+            dynamic_.size_ = count;
+            dynamic_.capacity_ = count;
+            dynamic_.data_ = static_cast<T*>(std::malloc(ELEMENT_SIZE * count));
+            std::uninitialized_fill(dynamic_.data_,
+                                    dynamic_.data_ + count,
+                                    value);
         }
     }
 
@@ -101,21 +110,18 @@ public:
                 dynamic_.size_ = count;
                 dynamic_.capacity_ = count;
                 dynamic_.data_ = static_cast<T*>(std::malloc(ELEMENT_SIZE * count));
-                std::uninitialized_default_construct(dynamic_.data_, dynamic_.data_ + count);
+                std::uninitialized_value_construct(dynamic_.data_, dynamic_.data_ + count);
             } else {
                 small_init();
-                std::uninitialized_default_construct(small_.data_.data(),
+                std::uninitialized_value_construct(small_.data_.data(),
                                                      small_.data_.data() + count);
-                // TODO: optimize this to one call
-                for(int i = 0; i < count; i++) {
-                    inc_small_size();
-                }
+                inc_small_size_by(count);
             }
         } else {
             dynamic_.size_ = count;
             dynamic_.capacity_ = count;
             dynamic_.data_ = static_cast<T*>(std::malloc(ELEMENT_SIZE * count));
-            std::uninitialized_default_construct(dynamic_.data_, dynamic_.data_ + count);
+            std::uninitialized_value_construct(dynamic_.data_, dynamic_.data_ + count);
         }
     }
 
@@ -322,7 +328,7 @@ public:
         }
 
         if(current_size == dynamic_.capacity_) {
-            const std::size_t new_capacity = current_size * GROW_FACTOR;
+            const std::size_t new_capacity = std::max(current_size, INITIAL_HEAP_SIZE) * GROW_FACTOR;
 
             if constexpr(std::is_trivially_constructible_v<T> and std::is_trivially_destructible_v<T>) {
                 dynamic_.data_ = static_cast<T*>(std::realloc(dynamic_.data_, new_capacity * ELEMENT_SIZE));
@@ -408,7 +414,7 @@ public:
     }
 
     ////////////////////////////////////////////////////////////////////
-    //                         SIZE AND EMPTY
+    //                         SIZE, EMPTY AND CAPACITY
     ////////////////////////////////////////////////////////////////////
     [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
     {
@@ -422,10 +428,29 @@ public:
         return dynamic_.size_;
     }
 
+    [[nodiscard]] constexpr auto capacity() const noexcept -> std::size_t
+    {
+
+        if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
+            if(is_small()) {
+                return SMALL_CAPACITY;
+            }
+        }
+
+        return dynamic_.capacity_;
+    }
+
+
     [[nodiscard]] constexpr auto empty() const noexcept -> bool
     {
         return size() <= 0;
     }
+
+
+    ////////////////////////////////////////////////////////////////////
+    //                         swap
+    ////////////////////////////////////////////////////////////////////
+
     constexpr auto swap(vector& other) noexcept -> void
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
@@ -456,6 +481,18 @@ public:
         }
     }
 
+    ////////////////////////////////////////////////////////////////////
+    //                         reserve
+    ////////////////////////////////////////////////////////////////////
+    constexpr auto reserve(std::size_t required) noexcept
+    {
+        if(required <= capacity()) {
+            return;
+        }
+
+        // TODO: implement me!
+    }
+
 private:
     [[nodiscard]] constexpr auto is_small() const noexcept -> bool
     {
@@ -470,6 +507,11 @@ private:
     [[nodiscard]] constexpr auto small_size() const noexcept -> std::uint8_t
     {
         return small_.info_ >> 1;
+    }
+
+    constexpr auto inc_small_size_by(std::size_t number) noexcept -> void
+    {
+        small_.info_ += static_cast<std::uint8_t>(number) << 1;
     }
 
     constexpr auto inc_small_size() noexcept -> void
@@ -496,8 +538,8 @@ private:
     constexpr auto dynamic_init() noexcept -> void
     {
         dynamic_.size_ = 0;
-        dynamic_.capacity_ = INITIAL_HEAP_SIZE;
-        dynamic_.data_ = static_cast<T*>(std::malloc(ELEMENT_SIZE * INITIAL_HEAP_SIZE));
+        dynamic_.capacity_ = 0;
+        dynamic_.data_ = nullptr;
     }
 
     // Compute the size of the custom vector in bytes.
@@ -510,11 +552,11 @@ private:
 
 
     // Size of one element in the vector
-    constinit inline static const auto ELEMENT_SIZE = sizeof(T);
-    constinit inline static const auto SMALL_CAPACITY = VECTOR_SIZE / ELEMENT_SIZE;
-    constinit inline static const auto INITIAL_HEAP_SIZE = 10;
-    constinit inline static const auto GROW_FACTOR = 1.5;
-    constinit inline static const auto SMALL_VECTOR_OPTIMIZATION_ENABLED = SMALL_CAPACITY > 0;
+    constinit inline static const std::size_t ELEMENT_SIZE = sizeof(T);
+    constinit inline static const std::size_t SMALL_CAPACITY = VECTOR_SIZE / ELEMENT_SIZE;
+    constinit inline static const std::size_t INITIAL_HEAP_SIZE = 10ul;
+    constinit inline static const double GROW_FACTOR = 1.5;
+    constinit inline static const bool SMALL_VECTOR_OPTIMIZATION_ENABLED = SMALL_CAPACITY > 0;
 
 
 private:
