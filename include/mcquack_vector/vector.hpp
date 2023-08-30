@@ -88,8 +88,8 @@ public:
                                         value);
             } else {
                 small_init();
-                std::uninitialized_fill(small_.data_.data(),
-                                        small_.data_.data() + count,
+                std::uninitialized_fill(small_.data_,
+                                        small_.data_ + count,
                                         value);
                 inc_small_size_by(count);
             }
@@ -174,7 +174,7 @@ public:
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(init.size() < SMALL_CAPACITY) {
                 small_init();
-                std::uninitialized_move(init.begin(), init.end(), small_.data_.begin());
+                std::uninitialized_move(init.begin(), init.end(), small_.data_);
                 inc_small_size_by(init.size());
                 return;
             }
@@ -312,7 +312,7 @@ public:
 
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(is_small() and current_size < SMALL_CAPACITY) {
-                new(small_.data_.data() + current_size) T{std::forward<Args>(args)...};
+                new(small_.data_ + current_size) T{std::forward<Args>(args)...};
                 inc_small_size();
                 return;
             }
@@ -365,7 +365,7 @@ public:
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(is_small()) {
-                return small_.data_.data();
+                return small_.data_;
             }
         }
         return dynamic_.data_;
@@ -375,7 +375,7 @@ public:
     {
         if constexpr(SMALL_VECTOR_OPTIMIZATION_ENABLED) {
             if(is_small()) {
-                return small_.data_.data();
+                return small_.data_;
             }
         }
         return dynamic_.data_;
@@ -465,15 +465,15 @@ private:
         auto* const data = static_cast<T*>(std::malloc(INITIAL_HEAP_SIZE * ELEMENT_SIZE));
 
         if constexpr(std::is_trivially_constructible_v<T>) {
-            std::memcpy(data, small_.data_.data(), INITIAL_HEAP_SIZE * ELEMENT_SIZE);
+            std::memcpy(data, small_.data_, INITIAL_HEAP_SIZE * ELEMENT_SIZE);
         } else {
-            std::uninitialized_move(small_.data_.begin(),
-                                    small_.data_.end(),
+            std::uninitialized_move(small_.data_,
+                                    small_.data_ + SMALL_CAPACITY,
                                     data);
         }
 
         if constexpr(not std::is_trivially_destructible_v<T>) {
-            std::destroy(small_.data_.begin(), dynamic_.data_.end());
+            std::destroy(small_.data_, small_.data_ + SMALL_CAPACITY);
         }
 
         dynamic_.capacity_ = INITIAL_HEAP_SIZE;
@@ -595,7 +595,8 @@ private:
 
         struct
         {
-            std::array<T, SMALL_CAPACITY> data_;
+            T data_[SMALL_CAPACITY];
+            // std::array<T, SMALL_CAPACITY> data_;
 
             // fill up the space between data_ and info,
             // such that info_ aligns with the dynamic_.data_ first byte
