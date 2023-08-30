@@ -462,12 +462,10 @@ public:
 private:
     constexpr auto emplace_back_small_to_dynamic() noexcept -> void
     {
-        const std::size_t new_capacity = SMALL_CAPACITY * GROW_FACTOR;
-
-        auto* data = static_cast<T*>(std::malloc(new_capacity * ELEMENT_SIZE));
+        auto* const data = static_cast<T*>(std::malloc(INITIAL_HEAP_SIZE * ELEMENT_SIZE));
 
         if constexpr(std::is_trivially_constructible_v<T>) {
-            std::memcpy(data, small_.data_.data(), SMALL_CAPACITY * ELEMENT_SIZE);
+            std::memcpy(data, small_.data_.data(), INITIAL_HEAP_SIZE * ELEMENT_SIZE);
         } else {
             std::uninitialized_move(small_.data_.begin(),
                                     small_.data_.end(),
@@ -478,19 +476,20 @@ private:
             std::destroy(small_.data_.begin(), dynamic_.data_.end());
         }
 
-        dynamic_.capacity_ = new_capacity;
+        dynamic_.capacity_ = INITIAL_HEAP_SIZE;
         dynamic_.size_ = SMALL_CAPACITY;
         dynamic_.data_ = data;
     }
 
     constexpr auto emplace_back_dynamic_expand(std::size_t current_size) noexcept -> void
     {
-        const std::size_t new_capacity = std::max(current_size, INITIAL_HEAP_SIZE) * GROW_FACTOR;
+        const std::size_t new_capacity = std::max(static_cast<std::size_t>(current_size * GROW_FACTOR),
+                                                  INITIAL_HEAP_SIZE);
 
         if constexpr(std::is_trivially_constructible_v<T> and std::is_trivially_destructible_v<T>) {
             dynamic_.data_ = static_cast<T*>(std::realloc(dynamic_.data_, new_capacity * ELEMENT_SIZE));
         } else {
-            auto* data = static_cast<T*>(std::malloc(new_capacity * ELEMENT_SIZE));
+            auto* const data = static_cast<T*>(std::malloc(new_capacity * ELEMENT_SIZE));
 
             if constexpr(std::is_trivially_constructible_v<T>) {
                 std::memcpy(data, dynamic_.data_, current_size * ELEMENT_SIZE);
@@ -564,18 +563,18 @@ private:
     // Compute the size of the custom vector in bytes.
     // This is calculated as the sum of sizes of two std::size_t members and one T* member,
     // minus two bytes which are used for tagging and size tracking.
-    constinit inline static const auto VECTOR_SIZE =
+    constexpr inline static const auto VECTOR_SIZE =
         2 * sizeof(std::size_t)
         + sizeof(T*)
         - sizeof(std::uint8_t);
 
 
     // Size of one element in the vector
-    constinit inline static const std::size_t ELEMENT_SIZE = sizeof(T);
-    constinit inline static const std::size_t SMALL_CAPACITY = VECTOR_SIZE / ELEMENT_SIZE;
-    constinit inline static const std::size_t INITIAL_HEAP_SIZE = 10ul;
-    constinit inline static const double GROW_FACTOR = 1.5;
-    constinit inline static const bool SMALL_VECTOR_OPTIMIZATION_ENABLED = SMALL_CAPACITY > 0;
+    constexpr inline static const std::size_t ELEMENT_SIZE = sizeof(T);
+    constexpr inline static const std::size_t SMALL_CAPACITY = VECTOR_SIZE / ELEMENT_SIZE;
+    constexpr inline static const double GROW_FACTOR = 1.6;
+    constexpr inline static const std::size_t INITIAL_HEAP_SIZE = std::max(4., SMALL_CAPACITY* GROW_FACTOR);
+    constexpr inline static const bool SMALL_VECTOR_OPTIMIZATION_ENABLED = SMALL_CAPACITY > 0;
 
 
 private:
@@ -603,7 +602,7 @@ private:
             [[no_unique_address]] std::conditional_t<
                 sizeof(dynamic_) - (sizeof(data_) + 1) == 0,
                 Empty,
-                std::array<std::uint8_t, sizeof(dynamic_) - (sizeof(data_) + 1)>>
+                std::uint8_t[sizeof(dynamic_) - (sizeof(data_) + 1)]>
                 dummy_;
 
             std::uint8_t info_;

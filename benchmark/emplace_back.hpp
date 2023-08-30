@@ -10,9 +10,9 @@ static void EmplaceBack(benchmark::State& state)
 {
     for(auto _ : state) {
 
-        state.PauseTiming();
+        // state.PauseTiming();
         Vec<T> v;
-        state.ResumeTiming();
+        // state.ResumeTiming();
 
         for(int i = 0; i < state.range(0); ++i) {
             if constexpr(std::is_same_v<std::string, T>) {
@@ -23,5 +23,7 @@ static void EmplaceBack(benchmark::State& state)
         }
 
         benchmark::DoNotOptimize(v);
+
+        // state.PauseTiming();
     }
 }

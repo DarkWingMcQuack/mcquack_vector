@@ -4,6 +4,7 @@
 #include <benchmark/benchmark.h>
 #include <mcquack_vector/vector.hpp>
 #include <string>
+#include <algorithm>
 #include <vector>
 
 
@@ -47,14 +48,11 @@ static void ConstructWithElem(benchmark::State& state)
 template<template<class> class Vec, class T>
 static void ConstructCopy(benchmark::State& state)
 {
-    for (auto _ : state) {
+    for(auto _ : state) {
         state.PauseTiming(); // Pause timing to exclude setup from the benchmark
 
         Vec<T> temp(state.range(0));
-
-        for (int i = 0; i < state.range(0); i++) {
-            temp[i] = i;
-        }
+        std::iota(temp.begin(), temp.end(), 0);
 
         state.ResumeTiming(); // Resume timing to include only the constructor
         Vec<T> vec(temp);
@@ -65,16 +63,15 @@ static void ConstructCopy(benchmark::State& state)
 template<template<class> class Vec, class T>
 static void ConstructMove(benchmark::State& state)
 {
-    for (auto _ : state) {
+    for(auto _ : state) {
         state.PauseTiming(); // Pause timing to exclude setup from the benchmark
 
         Vec<T> temp(state.range(0));
-
-        for (int i = 0; i < state.range(0); i++) {
-            temp[i] = i;
-        }
+        std::iota(temp.begin(), temp.end(), 0);
 
         state.ResumeTiming(); // Resume timing to include only the constructor
+
+
         Vec<T> vec(std::move(temp));
         benchmark::DoNotOptimize(vec); // Ensure that the whole construction is not optimized away
     }
